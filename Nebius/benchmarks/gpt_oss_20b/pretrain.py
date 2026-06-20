@@ -353,6 +353,10 @@ def get_validation_config(config):
 
 
 def get_tokenizer_config(config):
+    if config.model.data.mock_dataset:
+        vocab_size = config.model.data.mock_tokenizer_vocab_size
+        return TokenizerConfig(tokenizer_type="NullTokenizer", vocab_size=vocab_size)
+
     return TokenizerConfig(
         tokenizer_type="HuggingFaceTokenizer",
         tokenizer_model=config.model.tokenizer.model,
@@ -577,6 +581,17 @@ def main(cfg):
 
 
 if __name__ == "__main__":
+    DBG_ATTACH = False
+    if int(os.environ.get("DBG_ATTACH", "0")) == 1:
+        DBG_ATTACH = True
+        
+    if DBG_ATTACH and int(os.environ.get("RANK", "0")) == 0:
+        import debugpy
+        debugpy.listen(("127.0.0.1", 5678))
+        # optional (only when you want to pause immediately):
+        print('\n\n\n\n\n#### Waiting for debugger attach...', flush=True)
+        debugpy.wait_for_client()
+
     if utils.rank == 0:
         mllogger.start(key=mllogger.constants.INIT_START)
     main()
