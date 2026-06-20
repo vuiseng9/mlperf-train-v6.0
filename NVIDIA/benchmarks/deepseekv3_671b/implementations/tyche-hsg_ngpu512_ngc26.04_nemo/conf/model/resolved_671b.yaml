@@ -1,0 +1,119 @@
+# Full 671B model configuration
+# This uses defaults from HuggingFace config (no architecture overrides)
+# RESOLVED: config_common.sh + config_common_mxfp8.sh + config_GB200_128x4x240xtp2pp4ep32cp1_mxfp8_full_cg.sh
+# global_batch_size: MINIBS(240) * dp_size(64) = 15360  [dp_size = 512 gpus / (TP2*PP4*CP1)]
+
+model_size: "671b"
+
+mtp_num_layers: 1
+mtp_loss_scaling_factor: 0.1
+moe_router_topk: 8
+moe_router_num_groups: 8
+moe_router_group_topk: 4
+moe_router_topk_scaling_factor: 2.5
+# NOTE(dfridman): all parallelism parameters except ETP must be set
+tensor_model_parallel_size: 2
+pipeline_model_parallel_size: 4
+virtual_pipeline_model_parallel_size: 4
+context_parallel_size: 1
+expert_model_parallel_size: 32
+expert_tensor_parallel_size: 1
+pipeline_layout: "Et*4|(t*4|)*14tmL"
+
+mcore_fsdp: false
+
+# If True, use all-gather during the initial Megatron-FSDP parameter synchronization step.
+# Set to False to enable Cuda Graphs for FSDP.
+fsdp_all_gather_in_start_param_sync: true
+
+moe_token_dispatcher_type: flex
+moe_flex_dispatcher_backend: hybridep
+moe_hybridep_num_sms: 32
+moe_hybridep_num_sms_preprocessing: 32
+moe_grouped_gemm: true
+moe_single_grouped_weight: false
+moe_single_grouped_bias: false
+moe_permute_fusion: true
+moe_router_fusion: true
+moe_router_force_load_balancing: false
+moe_router_force_biased: null
+apply_rope_fusion: true
+moe_router_dtype: bf16
+moe_aux_loss_coeff: 0.01
+moe_expert_rank_capacity_factor: 4
+moe_paged_stash: true
+moe_paged_stash_buffer_size_factor_cuda: 1.5
+moe_paged_stash_buffer_size_factor_cpu: 1
+overlap_moe_expert_parallel_comm: true
+high_priority_a2a_comm_stream: true
+delay_wgrad_compute: true
+overlap_dispatch_backward_with_experts_wgrad: false
+use_dynamic_comp_stream: true
+log_moe_overload_factor: false
+fused_residual_rmsnorm: true
+use_te_activation_func: false
+
+# Fuse weight gradient accumulation to GEMMs.
+gradient_accumulation_fusion: true
+# Average gradients in collective operations - fuses scaling and reduction for gradient averaging.
+average_in_collective: true
+
+micro_batch_size: 1
+global_batch_size: 15360
+
+encoder_seq_length: 4096
+recompute_modules: "mlp"
+cuda_graph_implementation: "local"
+cuda_graph_scope: "full_iteration"
+cuda_graph_warmup_steps: 2
+
+cpu_offloading: false
+cpu_offloading_num_layers: 95
+cpu_offloading_retain_pinned_cpu_buffers: false
+
+# Fine-grained activation offloading
+# See https://github.com/NVIDIA/Megatron-LM/pull/1913 for details.
+# See doc for more details: https://nvidia-my.sharepoint.com/:p:/p/hongbinl/IQAOvMSFPtkJToJMONJIgq-qASczmPsTKu45diFnYDnToYk?e=zkN5kc.
+fine_grained_activation_offloading: false
+# Allowed modules: [core_attn, attn_proj, expert_fc1, moe_act, attn_norm, mlp_norm, qkv_linear]
+offload_modules: ""
+min_offloaded_tensor_size: 1048576
+
+seed: 1234
+use_rng_tracker: true
+fp8: true
+fp8_dot_product_attention: true
+fp8_output_proj: false
+fp4: false
+use_transformer_engine_op_fuser: true
+fp4_recipe: nvfp4
+nsys_profile:
+  enabled: false
+  start_step: 10
+  end_step: 12
+  ranks_str: 0  # Comma-separated PROFILE_RANKS env var, default to "0" if not set (parsed in Python)
+  gen_shape: false
+  nvtx_ranges: false # Set to True to enable NVTX profiling in both Nemo & MCore
+  use_pytorch_profiler: false
+  memory_profiler:
+    enable: false
+    file_prefix: memdump
+    # PyTorch memory snapshot (memory_viz). Independent of nsys PROFILE_START_STEP/END_STEP.
+    # MEMORY_PROFILE_START_STEP unset -> null: begin _record_memory_history at on_train_start (before WarmupCallback).
+    # Set to 0,1,... to begin when train_state.step reaches that value (main loop only; misses warmup capture).
+    start_step: null
+    # MEMORY_PROFILE_END_STEP unset -> null: dump at on_train_end. Set to N to dump after that train step ends.
+    end_step: null
+enable_perf_configs: true
+
+
+nccl_communicator_config_path: null
+sharp: false
+use_tp_pp_dp_mapping: false
+
+# Checkpointing
+resume_from_checkpoint: null
+dist_ckpt_format: torch_dist
+dist_ckpt_parallel_load: true
+
+tokenizer: "/tokenizer"  # mounted in config_mounts.sh
