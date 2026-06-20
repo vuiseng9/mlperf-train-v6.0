@@ -106,3 +106,5 @@ WORKDIR /workspace/llm
 COPY . .
 RUN cd /workspace/llm/embedding_lib && pip install --force-reinstall --no-deps --no-build-isolation .
 
+RUN ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.9 /usr/lib/x86_64-linux-gnu/libcudnn.so
+
